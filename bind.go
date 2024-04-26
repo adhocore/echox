@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: © 2015 LabStack LLC and Echo contributors
+//
+// Copied from https://github.com/labstack/echo/blob/master/bind.go
+// (The difference is in fallback tag name to field name and skip bind by hyphen)
+// See license https://github.com/labstack/echo/blob/master/LICENSE
 package echox
 
 import (
@@ -34,13 +40,12 @@ var DefaultBinder = &FallbackBinder{}
 
 // BindPathParams binds path params to bindable object
 func (b *FallbackBinder) BindPathParams(c echo.Context, i any) error {
-	names := c.ParamNames()
-	values := c.ParamValues()
 	params := map[string][]string{}
+	names, values := c.ParamNames(), c.ParamValues()
 	for i, name := range names {
 		params[name] = []string{values[i]}
 	}
-	if err := b.BindData(i, params, "param"); err != nil {
+	if err := b.BindData(i, params, paramTag); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 	}
 	return nil
@@ -48,7 +53,7 @@ func (b *FallbackBinder) BindPathParams(c echo.Context, i any) error {
 
 // BindQueryParams binds query params to bindable object
 func (b *FallbackBinder) BindQueryParams(c echo.Context, i any) error {
-	if err := b.BindData(i, c.QueryParams(), "query"); err != nil {
+	if err := b.BindData(i, c.QueryParams(), queryTag); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 	}
 	return nil
@@ -90,7 +95,7 @@ func (b *FallbackBinder) BindBody(c echo.Context, i any) (err error) {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
-		if err = b.BindData(i, params, "form"); err != nil {
+		if err = b.BindData(i, params, formTag); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
 	default:
@@ -101,7 +106,7 @@ func (b *FallbackBinder) BindBody(c echo.Context, i any) (err error) {
 
 // BindHeaders binds HTTP headers to a bindable object
 func (b *FallbackBinder) BindHeaders(c echo.Context, i any) error {
-	if err := b.BindData(i, c.Request().Header, "header"); err != nil {
+	if err := b.BindData(i, c.Request().Header, headerTag); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 	}
 	return nil
@@ -163,7 +168,7 @@ func (b *FallbackBinder) BindData(destination any, data map[string][]string, tag
 
 	// !struct
 	if typ.Kind() != reflect.Struct {
-		if tag == "param" || tag == "query" || tag == "header" {
+		if tag == paramTag || tag == queryTag || tag == headerTag {
 			// incompatible type, data is probably to be found in the body
 			return nil
 		}

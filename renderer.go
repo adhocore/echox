@@ -1,3 +1,5 @@
+// Copied from https://github.com/gofiber/template
+// See license https://github.com/gofiber/template/blob/master/LICENSE
 package echox
 
 import (

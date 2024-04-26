@@ -1,3 +1,5 @@
+// Copied from https://github.com/gofiber/fiber
+// See license https://github.com/gofiber/fiber/blob/main/LICENSE
 package echox
 
 import (
@@ -18,9 +20,19 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
-const ViewBind = "viewbind"
-const UserCtx = "userctx"
-const ReqStart = "reqstart"
+const (
+	ViewBind = "viewbind"
+	UserCtx  = "userctx"
+	ReqStart = "reqstart"
+)
+
+const (
+	queryTag  = "query"
+	headerTag = "header"
+	formTag   = "form"
+	paramTag  = "param"
+	cookieTag = "cookie"
+)
 
 type Context struct{ echo.Context }
 
@@ -47,7 +59,7 @@ func (c *Context) Attachmentx(filename ...string) {
 
 // BaseURL returns (protocol + host).
 func (c *Context) BaseURL() string {
-	return c.Protocol() + "://" + c.Context.Request().Host
+	return c.Scheme() + "://" + c.Context.Request().Host
 }
 
 // BodyRaw contains the raw body submitted in a POST request.
@@ -73,8 +85,8 @@ func (c *Context) Body() []byte {
 // application/json, application/xml, application/x-www-form-urlencoded, multipart/form-data
 // All JSON extenstion mime types are supported (eg. application/problem+json)
 // If none of the content types above are matched, it will return a ErrUnprocessableEntity error
-func (c *Context) BodyParser(i any) error {
-	return DefaultBinder.Bind(i, c)
+func (c *Context) BodyParser(out any) error {
+	return DefaultBinder.BindBody(c, out)
 }
 
 // ClearCookie expires a specific cookie by key on the client side.
@@ -120,9 +132,6 @@ func (c *Context) Cookiesx(key string, defaultValue ...string) (val string) {
 func (c *Context) CookieParser(out any) error {
 	data := map[string][]string{}
 	for _, co := range c.Context.Cookies() {
-		if _, ok := data[co.Name]; !ok {
-			data[co.Name] = []string{}
-		}
 		data[co.Name] = append(data[co.Name], co.Value)
 	}
 	return DefaultBinder.BindData(out, data, "cookie")
@@ -277,12 +286,6 @@ func (c *Context) Method(override ...string) string {
 	return c.Request().Method
 }
 
-// MultipartForm parse form entries from binary.
-// This returns a map[string][]string, so given a key the value will be a string slice.
-func (c *Context) MultipartForm() (*multipart.Form, error) {
-	return nil, echo.ErrNotImplemented
-}
-
 // OriginalURL contains the original request URL.
 // Returned value is only valid within the handler. Do not store any references.
 // Make copies or use the Immutable setting to use the value outside the Handler.
@@ -312,7 +315,7 @@ func (c *Context) AllParams() map[string]string {
 
 // ParamsParser binds the param string to a struct.
 func (c *Context) ParamsParser(out any) error {
-	return echo.ErrNotImplemented
+	return DefaultBinder.BindPathParams(c, out)
 }
 
 // ParamsInt is used to get an integer from the route parameters
@@ -341,7 +344,7 @@ func (c *Context) Pathx(override ...string) string {
 // Protocol contains the request protocol string: http or https for TLS requests.
 // Please use Config.EnableTrustedProxyCheck to prevent header spoofing, in case when your app is behind the proxy.
 func (c *Context) Protocol() string {
-	return c.Request().URL.Scheme
+	return c.Scheme()
 }
 
 // Query returns the query string parameter in the url.
@@ -449,7 +452,7 @@ func (c *Context) QueryParser(out any) error {
 
 // ReqHeaderParser binds the request header strings to a struct.
 func (c *Context) ReqHeaderParser(out any) error {
-	return DefaultBinder.BindData(out, c.Request().Header, "header")
+	return DefaultBinder.BindHeaders(c, out)
 }
 
 var (
@@ -568,7 +571,7 @@ func (*Context) SaveFileToStorage(fileheader *multipart.FileHeader, path string,
 
 // Secure returns whether a secure connection was established.
 func (c *Context) Secure() bool {
-	return c.Protocol() == "https"
+	return c.Scheme() == "https"
 }
 
 // Send sets the HTTP response body without copying it.
