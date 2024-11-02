@@ -58,6 +58,8 @@ func (e *Render) Load() *Render {
 		return e
 	}
 
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.t = template.New(e.Directory)
 	e.t.Funcs(e.fns)
 
@@ -112,10 +114,10 @@ func (e *Render) Render(out io.Writer, name string, binding any, c echo.Context)
 		layout = parts[1:]
 	}
 
-	e.mu.RLock()
 	if e.Reload {
 		e.Load()
 	}
+	e.mu.RLock()
 	tmpl := e.t.Lookup(name)
 	e.mu.RUnlock()
 
