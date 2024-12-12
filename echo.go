@@ -10,8 +10,8 @@ import (
 type HandlerFunc = func(c *Context) error
 
 type Error struct {
-	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Code    int    `json:"code"`
 }
 
 func (e *Error) Error() string { return e.Message }
